@@ -14,4 +14,14 @@ class Bill(models.Model):
 
     def __str__(self):
         return f"Bill #{self.id} - {self.patient.name}"
+
+class BillItem(models.Model):
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='items')
+    description = models.CharField(max_length=255)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+
+
+    def __str__(self):
+        return f"{self.description} - Bill #{self.bill.id}"
    
