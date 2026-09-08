@@ -68,3 +68,36 @@ class PaymentTests(TestCase):
         self.assertEqual(payment.amount, Decimal("500.00"))
         self.assertEqual(payment.method, "MPESA")
         self.assertEqual(payment.transaction_id, "TEST12345")
+
+
+    def test_duplicate_mpesa_webhook_does_not_create_payment(self):
+        data = {
+            "transaction_id": "DUPLICATE123",
+            "bill_id": self.bill.id,
+            "amount": "500.00",
+            "status": "SUCCESS",
+            "paid_at": timezone.now().isoformat()
+        }
+
+        first_response = self.client.post(
+            '/api/payments/mpesa_webhook/',
+            data,
+            format='json'
+        )
+
+        second_response = self.client.post(
+            '/api/payments/mpesa_webhook/',
+            data,
+            format='json'
+        )
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 200)
+
+        self.assertEqual(Payment.objects.count(), 1)
+
+        payment = Payment.objects.first()
+
+        self.assertEqual(payment.transaction_id, 'DUPLICATE123')
+        self.assertEqual(payment.amount, Decimal('500.00'))
+        self.assertEqual(payment.bill_id, self.bill.id)
