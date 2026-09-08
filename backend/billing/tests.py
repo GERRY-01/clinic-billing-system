@@ -135,3 +135,23 @@ class PaymentTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
         self.assertEqual(Payment.objects.count(), 0)
+
+    def test_partial_cash_payment_leaves_outstanding_balance(self):
+        data = {
+            "amount": "500.00"
+        }
+
+        response = self.client.post(
+            f'/api/bills/{self.bill.id}/cash_payment/',
+            data,
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(Payment.objects.count(), 1)
+
+        payment = Payment.objects.first()
+        self.assertEqual(payment.amount, Decimal("500.00"))
+
+        self.assertEqual(response.data["balance_due"], Decimal("1500.00"))
