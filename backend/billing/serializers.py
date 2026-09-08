@@ -20,6 +20,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class BillSerializer(serializers.ModelSerializer):
     items = BillItemSerializer(many=True)
     payments = PaymentSerializer(many=True, read_only=True)
+    patient_name = serializers.CharField(source='patient.name', read_only=True)
 
     total_amount = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
@@ -30,6 +31,7 @@ class BillSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'patient',
+            'patient_name',
             'created_at',
             'items',
             'payments',
