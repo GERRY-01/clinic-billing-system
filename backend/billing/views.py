@@ -115,3 +115,24 @@ def cash_payment(request, bill_id):
         },
         status=status.HTTP_201_CREATED
     )
+
+## the webhook endpoint 
+@api_view(['POST'])
+def mpesa_webhook(request):
+
+    transaction_id = request.data.get('transaction_id')
+    bill_id = request.data.get('bill_id')
+    amount = request.data.get('amount')
+    status_value = request.data.get('status')
+    paid_at = request.data.get('paid_at')
+
+    return Response(
+        {
+            "transaction_id": transaction_id,
+            "bill_id": bill_id,
+            "amount": amount,
+            "status": status_value,
+            "paid_at": paid_at
+        },
+        status=status.HTTP_200_OK
+    )
