@@ -120,3 +120,18 @@ class PaymentTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(Payment.objects.count(), 0)
+
+    def test_cash_payment_overpayment_is_rejected(self):
+        data = {
+            "amount": "2500.00"
+        }
+
+        response = self.client.post(
+            f'/api/bills/{self.bill.id}/cash_payment/',
+            data,
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(Payment.objects.count(), 0)
