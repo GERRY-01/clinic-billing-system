@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from .models import Patient, Bill, BillItem, Payment
@@ -41,3 +42,29 @@ class PaymentTests(TestCase):
 
         self.assertEqual(payment.amount, Decimal("1500.00"))
         self.assertEqual(payment.method, "CASH")
+
+
+    def test_mpesa_payment_is_recorded(self):
+        url = '/api/payments/mpesa_webhook/'
+
+        data = {
+            "transaction_id": "TEST12345",
+            "bill_id": self.bill.id,
+            "amount": "500.00",
+            "status": "SUCCESS",
+            "paid_at": timezone.now().isoformat()
+        }
+
+        response = self.client.post(
+            url,
+            data,
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        payment = Payment.objects.get(bill=self.bill)
+
+        self.assertEqual(payment.amount, Decimal("500.00"))
+        self.assertEqual(payment.method, "MPESA")
+        self.assertEqual(payment.transaction_id, "TEST12345")
