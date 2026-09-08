@@ -24,4 +24,29 @@ class BillItem(models.Model):
 
     def __str__(self):
         return f"{self.description} - Bill #{self.bill.id}"
-   
+
+class Payment(models.Model):
+    PAYMENT_METHODS = [
+        ("CASH", "Cash"),
+        ("MPESA", "M-Pesa"),
+    ]
+
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name="payments")
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    method = models.CharField(max_length=10, choices=PAYMENT_METHODS)
+
+    transaction_id = models.CharField(
+        max_length=100,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    paid_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Payment for Bill #{self.bill.id} - {self.method}"
