@@ -101,3 +101,22 @@ class PaymentTests(TestCase):
         self.assertEqual(payment.transaction_id, 'DUPLICATE123')
         self.assertEqual(payment.amount, Decimal('500.00'))
         self.assertEqual(payment.bill_id, self.bill.id)
+
+    def test_failed_mpesa_webhook_does_not_create_payment(self):
+        data = {
+            "transaction_id": "FAILED123",
+            "bill_id": self.bill.id,
+            "amount": "500.00",
+            "status": "FAILED",
+            "paid_at": timezone.now().isoformat()
+        }
+
+        response = self.client.post(
+            '/api/payments/mpesa_webhook/',
+            data,
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(Payment.objects.count(), 0)
