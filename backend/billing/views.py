@@ -126,13 +126,103 @@ def mpesa_webhook(request):
     status_value = request.data.get('status')
     paid_at = request.data.get('paid_at')
 
+    if not transaction_id or not bill_id or amount is None or not paid_at:
+        return Response(
+            {"error": "transaction_id, bill_id, amount and paid_at are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if status_value == "FAILED":
+        return Response(
+            {"message": "M-Pesa payment failed. No payment recorded."},
+            status=status.HTTP_200_OK
+        )
+
+    if status_value != "SUCCESS":
+        return Response(
+            {"error": "Invalid payment status."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    existing_payment = Payment.objects.filter(
+        transaction_id=transaction_id
+    ).first()
+
+    if existing_payment:
+
+        if existing_payment.bill_id != int(bill_id):
+            return Response(
+                {"error": "Transaction ID is already associated with another bill."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {
+                "message": "Payment already recorded.",
+                "payment_id": existing_payment.id,
+                "transaction_id": existing_payment.transaction_id
+            },
+            status=status.HTTP_200_OK
+        )
+
+    bill = get_object_or_404(Bill, id=bill_id)
+
+    try:
+        amount = Decimal(str(amount))
+    except (InvalidOperation, ValueError):
+        return Response(
+            {"error": "Invalid payment amount."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if amount <= 0:
+        return Response(
+            {"error": "Payment amount must be greater than zero."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    total_amount = sum(
+        (
+            item.unit_price * item.quantity
+            for item in bill.items.all()
+        ),
+        Decimal('0.00')
+    )
+
+    total_paid = sum(
+        (
+            payment.amount
+            for payment in bill.payments.all()
+        ),
+        Decimal('0.00')
+    )
+
+    balance_due = total_amount - total_paid
+
+    if amount > balance_due:
+        return Response(
+            {"error": "Payment exceeds the outstanding balance."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    payment = Payment.objects.create(
+        bill=bill,
+        amount=amount,
+        method="MPESA",
+        transaction_id=transaction_id,
+        paid_at=paid_at
+    )
+
     return Response(
         {
+            "message": "M-Pesa payment recorded successfully.",
+            "payment_id": payment.id,
             "transaction_id": transaction_id,
-            "bill_id": bill_id,
-            "amount": amount,
+            "bill_id": bill.id,
+            "amount": payment.amount,
             "status": status_value,
-            "paid_at": paid_at
+            "paid_at": payment.paid_at,
+            "balance_due": balance_due - amount
         },
-        status=status.HTTP_200_OK
+        status=status.HTTP_201_CREATED
     )
